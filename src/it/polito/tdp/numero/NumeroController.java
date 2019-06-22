@@ -2,6 +2,9 @@ package it.polito.tdp.numero;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+
+import it.polito.tdp.numeron.model.NumeroModel;
+import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextArea;
@@ -10,12 +13,7 @@ import javafx.scene.layout.HBox;
 
 public class NumeroController {
 	
-	private final int NMAX = 100;
-	private final int TMAX = 8;
-	
-	private int segreto;
-	int tentativiFatti;
-	private boolean inGioco = false;
+	private NumeroModel model;
 	
 
     @FXML
@@ -44,16 +42,16 @@ public class NumeroController {
     void handleNuovaPartita(ActionEvent event) {
     	// Gestisce l'inizio di una nuova partita
     	
-    	//Logica gioco
-    	this.segreto = (int)(Math.random()*NMAX)+1;
-    	this.tentativiFatti = 0;
-    	this.inGioco = true;
     	
     	//Gestione interfaccia
     	boxControlloPartita.setDisable(true);
     	boxControlloTentativi.setDisable(false);
     	txtMessaggi.clear();
-    	txtRimasti.setText(Integer.toString(this.TMAX));
+    	txtTentativo.clear();
+    	//txtRimasti.setText(Integer.toString(model.getTMAX()));
+    	
+    	//comunico al modello di iniziare una nuova partita
+    	model.newGame();
     	
     }
     
@@ -63,7 +61,7 @@ public class NumeroController {
     	//leggi valore inserito
     	String ts = txtTentativo.getText();
     	
-    	// controlla se valido
+    	// controlla se valido il tipo di dato
     	int tentativo; 
     	try {
     		tentativo = Integer.parseInt(ts);
@@ -73,42 +71,38 @@ public class NumeroController {
     		return;
     	}
     	
-    	tentativiFatti++;
+    	if(!model.tentativoValido(tentativo)) {
+    		txtMessaggi.appendText("Tentativo non valido\n");
+    		return;
+    	}
     	
-    	// controlla se indovinato
-    	//->fine partita
-    	if(tentativo == segreto) {
-    		txtMessaggi.appendText("Complimenti, hai indovinato! in "+tentativiFatti+"tentativi/n");
+    	int risultato = model.tentativo(tentativo);
+    	
+    	if(risultato == 0) {
+    		txtMessaggi.appendText("Complimenti, hai indovinato! in "+model.getTentativiFatti()+"tentativi/n");
     		
     		boxControlloPartita.setDisable(false);
     		boxControlloTentativi.setDisable(true);
-    		this.inGioco = false;
-    		return;
-    		
     	}
-    	
-    	//verifica se esaurito tentativi
-    	//->fine partita
-    	if(tentativiFatti ==TMAX) {
-    		txtMessaggi.appendText("HAI PERSo, il num segreto era : "+segreto+"\n");
-    		
-    		boxControlloPartita.setDisable(false);
-    		boxControlloTentativi.setDisable(true);
-    		this.inGioco = false;
-    		return;
-    		//non va bene fare copia in colla!!!
-    	}
-    	
-    	//infornma troppo alto o basso 
-    	//->stampa messaggio
-    	if(tentativo <segreto) {
+    	else if(risultato<0) {
     		txtMessaggi.appendText("Tentativo troppo Basso\n");
-    	}else {
+    	} else {
     		txtMessaggi.appendText("Tentativo troppo Alto\n");
     	}
+    	
     	//aggiorna interfaccia tentativi rimasti
-    	txtRimasti.setText(Integer.toString(TMAX-tentativiFatti));
-
+    	//txtRimasti.setText(Integer.toString(model.getTMAX()-model.getTentativiFatti()));
+    	
+    	if(!model.isInGioco()) {
+    		//la partita e' finita
+    		
+    		if(risultato !=0) {
+    			txtMessaggi.appendText("Hai perso");
+    			txtMessaggi.appendText("\n il numero segreto era:"+model.getSegreto());
+    			boxControlloPartita.setDisable(false);
+    			boxControlloTentativi.setDisable(true);
+    		}
+    	}
     }
 
     @FXML
@@ -119,6 +113,12 @@ public class NumeroController {
         assert txtTentativo != null : "fx:id=\"txtTentativo\" was not injected: check your FXML file 'Numero.fxml'.";
         assert txtMessaggi != null : "fx:id=\"txtMessaggi\" was not injected: check your FXML file 'Numero.fxml'.";
 
+    }
+    
+    public void setModel(NumeroModel model) {
+    	this.model = model;
+    	
+    	txtRimasti.accessibleTextProperty().bind(Bindings.convert(model.tentativiFattiProperty()));
     }
 }
 
